@@ -1,8 +1,11 @@
-import type { HandLandmarkerResult } from "@mediapipe/tasks-vision"
+import type {
+  HandLandmarkerResult,
+  NormalizedLandmark,
+} from "@mediapipe/tasks-vision"
 
 // Largest centered crop of the source video matching the destination aspect
 // ratio, so the video fills the screen with zero stretch.
-function computeCoverRect(
+export function computeCoverRect(
   srcW: number,
   srcH: number,
   dstW: number,
@@ -20,6 +23,26 @@ function computeCoverRect(
   const sWidth = srcW
   const sHeight = srcW / dstRatio
   return { sx: 0, sy: (srcH - sHeight) / 2, sWidth, sHeight }
+}
+
+// Maps a normalized landmark to canvas coordinates, accounting for the
+// cover crop and the mirrored (selfie) rendering.
+export function landmarkToCanvas(
+  point: NormalizedLandmark,
+  videoW: number,
+  videoH: number,
+  canvasW: number,
+  canvasH: number
+) {
+  const { sx, sy, sWidth, sHeight } = computeCoverRect(
+    videoW,
+    videoH,
+    canvasW,
+    canvasH
+  )
+  const x = ((point.x * videoW - sx) / sWidth) * canvasW
+  const y = ((point.y * videoH - sy) / sHeight) * canvasH
+  return { x: canvasW - x, y }
 }
 
 // Mirrored camera frame with landmark dots on top

@@ -2,7 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 
-import { drawEnergy, drawVideoFrame } from "@/lib/gesture-synth/canvas"
+import { AsciiEffect, convexHull } from "@/lib/gesture-synth/ascii-effect"
+import {
+  drawEnergy,
+  drawVideoFrame,
+  landmarkToCanvas,
+} from "@/lib/gesture-synth/canvas"
 import {
   ChordStabilizer,
   type ChordState,
@@ -10,6 +15,7 @@ import {
 import {
   classifyChord,
   createHandLandmarker,
+  getExtendedFingerTips,
   getHandHorizontalTilt,
   getRightHandQualityIndex,
   getVolumeFromHeight,
@@ -97,6 +103,7 @@ export function useGestureSynth() {
 
     const synth = synthRef.current!
     const stabilizer = new ChordStabilizer()
+    const asciiEffect = new AsciiEffect()
 
     let disposed = false
     let rafId = 0
@@ -160,6 +167,36 @@ export function useGestureSynth() {
             if (handedness === "Left") leftHand = landmarks
             if (handedness === "Right") rightHand = landmarks
           })
+
+          // TouchDesigner-style effect region: every extended fingertip is a
+          // candidate corner, and their convex hull (the best polygon the
+          // active fingers can form) renders the feed as ASCII art.
+          const lh: Landmarks | null = leftHand
+          const rh: Landmarks | null = rightHand
+          const tips = [
+            ...(lh ? getExtendedFingerTips(lh, "Left") : []),
+            ...(rh ? getExtendedFingerTips(rh, "Right") : []),
+          ]
+          if (tips.length >= 3) {
+            const corners = convexHull(
+              tips.map((p) =>
+                landmarkToCanvas(
+                  p,
+                  videoEl!.videoWidth,
+                  videoEl!.videoHeight,
+                  canvasEl!.width,
+                  canvasEl!.height
+                )
+              )
+            )
+            asciiEffect.draw(
+              ctx!,
+              videoEl!,
+              corners,
+              canvasEl!.width,
+              canvasEl!.height
+            )
+          }
         }
 
         // 2. Raw gesture state: left hand picks the chord, right hand voices it

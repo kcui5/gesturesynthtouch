@@ -123,6 +123,26 @@ export function getVolumeFromHeight(landmarks: Landmarks) {
   return 1 - (clamped - TOP) / (BOTTOM - TOP)
 }
 
+const THUMB_TIP = 4
+
+// Tips of every currently extended finger (thumb included). These become
+// candidate corners for the TouchDesigner-style effect region.
+export function getExtendedFingerTips(
+  landmarks: Landmarks,
+  handedness: Handedness
+) {
+  const tips = []
+  if (isThumbExtended(landmarks, handedness)) {
+    tips.push(landmarks[THUMB_TIP]!)
+  }
+  for (const name of Object.keys(FINGERS) as (keyof typeof FINGERS)[]) {
+    if (isFingerExtended(landmarks, name)) {
+      tips.push(landmarks[FINGERS[name].tip]!)
+    }
+  }
+  return tips
+}
+
 // Right hand: extended finger count (thumb excluded) -> voicing 1-4
 export function getRightHandQualityIndex(landmarks: Landmarks) {
   return [
