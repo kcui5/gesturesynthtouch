@@ -1,0 +1,136 @@
+"use client"
+
+import { useRef } from "react"
+
+import { Button } from "@workspace/ui/components/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@workspace/ui/components/dialog"
+
+function Section({
+  title,
+  children,
+}: {
+  title: string
+  children: React.ReactNode
+}) {
+  return (
+    <div className="flex flex-col gap-2">
+      <h3 className="font-pixel text-base text-(--synth-text)">{title}</h3>
+      <div className="font-mono text-sm leading-relaxed text-white/85">
+        {children}
+      </div>
+    </div>
+  )
+}
+
+export function HelpDialog() {
+  // Focus the title on open so the scrollable guide starts at the top
+  // instead of auto-focusing the link at the bottom.
+  const titleRef = useRef<HTMLHeadingElement | null>(null)
+
+  return (
+    <Dialog>
+      <DialogTrigger
+        render={
+          <Button
+            variant="outline"
+            size="icon-lg"
+            aria-label="Help"
+            className="absolute bottom-4 left-4 z-6 border-2 border-(--synth-border) bg-(--synth-panel)/90 font-pixel text-base text-(--synth-text) shadow-[3px_3px_0_rgba(0,0,0,0.5)] hover:border-(--synth-text) hover:bg-(--synth-panel) hover:text-(--synth-text) dark:border-(--synth-border) dark:bg-(--synth-panel)/90 dark:hover:bg-(--synth-panel)"
+          />
+        }
+      >
+        ?
+      </DialogTrigger>
+
+      <DialogContent
+        initialFocus={titleRef}
+        className="max-h-[80vh] gap-6 overflow-y-auto border-2 border-(--synth-border) bg-(--synth-panel) text-white shadow-[6px_6px_0_rgba(0,0,0,0.6)] ring-0 sm:max-w-lg **:data-[slot=dialog-close]:text-(--synth-text)"
+      >
+        <DialogHeader>
+          <DialogTitle
+            ref={titleRef}
+            tabIndex={-1}
+            className="font-pixel text-lg text-(--synth-text) outline-none"
+          >
+            Gesture Synth Guide
+          </DialogTitle>
+        </DialogHeader>
+
+        <Section title="Left Hand">
+          <p>
+            <b>Tilt</b>
+            <br />
+            Inward → Major
+            <br />
+            Outward → Minor
+          </p>
+          <p className="mt-3">
+            <b>Fingers (Scale Degree)</b>
+            <br />
+            1 → I<br />
+            2 → II
+            <br />
+            3 → III
+            <br />
+            4 → IV
+            <br />
+            5 → V<br />
+            Index + Pinky → VI
+            <br />
+            Index + Pinky + Thumb → VII
+          </p>
+        </Section>
+
+        <Section title="Right Hand">
+          <p>
+            <b>Fingers (Chord Quality)</b>
+            <br />
+            1 → Root Position
+            <br />
+            2 → 1st Inversion
+            <br />
+            3 → Major/Minor 7th
+            <br />
+            4 → Dominant/Diminished 7th
+          </p>
+          <p className="mt-3">
+            <b>Octave</b>
+            <br />
+            Thumb In → higher octave
+            <br />
+            Thumb Out → lower octave
+          </p>
+          <p className="mt-3">
+            <b>Tilt</b>
+            <br />
+            Inward → More Filter
+            <br />
+            Outward → Less Filter
+          </p>
+          <p className="mt-3">
+            <b>Height</b>
+            <br />
+            Higher → Louder
+            <br />
+            Lower → Softer
+          </p>
+        </Section>
+
+        <a
+          href="https://www.instagram.com/p/DbH1BACxNCG/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-mono text-sm text-(--synth-text) hover:text-white"
+        >
+          📹 Watch Video Tutorial on Instagram!
+        </a>
+      </DialogContent>
+    </Dialog>
+  )
+}

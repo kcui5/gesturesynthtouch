@@ -1,0 +1,56 @@
+/* Gesture Synth theme — deep blue on near-black */
+:root {
+  --synth-panel: #0b1220; /* HUD panel background */
+  --synth-text: #7fa5ff; /* bright blue for text and lit elements */
+  --synth-border: #3a63d6; /* deep blue for borders and the frame */
+  --synth-dim: #1d2a4a; /* unlit meter bars */
+  --synth-frame-dark: #0a1531; /* dark pane of the animated frame */
+  --synth-frame-light: #33549f; /* light pane of the animated frame */
+}
+
+/* Animated frame: two huge diagonal panes of dark/light blue that slowly
+   pan left to right behind the inset camera view. Each pane is roughly half
+   the screen so only ~2 are visible at once. The horizontal shift equals one
+   full pattern period (2 panes at 45deg -> 2 * sqrt(2) * pane width) so the
+   loop is seamless. */
+.synth-frame {
+  --synth-pane: 45vmax;
+  background: repeating-linear-gradient(
+    45deg,
+    var(--synth-frame-dark) 0,
+    var(--synth-frame-dark) var(--synth-pane),
+    var(--synth-frame-light) var(--synth-pane),
+    var(--synth-frame-light) calc(var(--synth-pane) * 2)
+  );
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .synth-frame {
+    animation: synth-frame-pan 60s linear infinite;
+  }
+}
+
+@keyframes synth-frame-pan {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: calc(var(--synth-pane) * 2.82843) 0;
+  }
+}
+
+/* Hard on/off blink for the pixel aesthetic (no smooth fades) */
+@keyframes pixel-blink {
+  0%,
+  54% {
+    opacity: 1;
+  }
+  55%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.pixel-blink {
+  animation: pixel-blink 1.2s steps(1, end) infinite;
+}

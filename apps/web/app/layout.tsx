@@ -1,4 +1,4 @@
-import { Geist, Geist_Mono, JetBrains_Mono } from "next/font/google"
+import { Geist, JetBrains_Mono, Silkscreen } from "next/font/google"
 
 import "@workspace/ui/globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
@@ -11,6 +11,12 @@ const fontSans = Geist({
 
 const jetbrainsMono = JetBrains_Mono({subsets:['latin'],variable:'--font-mono'})
 
+const silkscreen = Silkscreen({
+  subsets: ["latin"],
+  weight: ["400", "700"],
+  variable: "--font-pixel",
+})
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -20,7 +26,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={cn("antialiased", fontSans.variable, "font-mono", jetbrainsMono.variable)}
+      className={cn("antialiased", fontSans.variable, "font-mono", jetbrainsMono.variable, silkscreen.variable)}
     >
       <body>
         <ThemeProvider>{children}</ThemeProvider>
