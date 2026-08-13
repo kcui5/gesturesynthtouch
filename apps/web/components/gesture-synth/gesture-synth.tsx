@@ -4,11 +4,9 @@ import { cn } from "@workspace/ui/lib/utils"
 
 import { useGestureSynth } from "@/hooks/use-gesture-synth"
 
+import { BreadboardPanel } from "./breadboard-panel"
 import { ChordReadout } from "./chord-readout"
-import { HelpDialog } from "./help-dialog"
 import { StartOverlay } from "./start-overlay"
-import { SynthControls } from "./synth-controls"
-import { VolumeMeter } from "./volume-meter"
 
 import "@/app/gesture-synth.css"
 
@@ -23,6 +21,9 @@ export function GestureSynth() {
     setKeyNote,
     waveform,
     setWaveform,
+    aiKeyNeeded,
+    aiKey,
+    setAiKey,
   } = useGestureSynth()
 
   return (
@@ -38,18 +39,21 @@ export function GestureSynth() {
           )}
         />
 
-        <SynthControls
+        <BreadboardPanel
           keyNote={keyNote}
           onKeyNoteChange={setKeyNote}
           waveform={waveform}
           onWaveformChange={setWaveform}
+          litBars={hud.litBars}
+          filterPercent={hud.filterPercent}
+          aiKeyNeeded={aiKeyNeeded}
+          aiKey={aiKey}
+          onAiKeyChange={setAiKey}
         />
-        <VolumeMeter litBars={hud.litBars} filterPercent={hud.filterPercent} />
         <ChordReadout
           chordLabel={hud.chordLabel}
           qualityLabel={hud.qualityLabel}
         />
-        <HelpDialog />
 
         {!started && <StartOverlay onStart={start} />}
       </div>

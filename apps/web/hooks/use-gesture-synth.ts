@@ -2,7 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 
-import { AsciiEffect, convexHull } from "@/lib/gesture-synth/ascii-effect"
+import {
+  AsciiEffect,
+  convexHull,
+  polygonArea,
+} from "@/lib/gesture-synth/ascii-effect"
 import {
   drawEnergy,
   drawVideoFrame,
@@ -33,9 +37,25 @@ import {
   type KeyNote,
   type Waveform,
 } from "@/lib/gesture-synth/music"
+import { ANIME_PROMPT, LucyEffect } from "@/lib/gesture-synth/lucy-effect"
 import { SynthEngine } from "@/lib/gesture-synth/synth-engine"
 
 export const VOLUME_BAR_COUNT = 8
+
+// localStorage slot for a user-provided Decart key, used on deployments
+// where the server has no DECART_API_KEY of its own.
+const AI_KEY_STORAGE = "gesture-synth-decart-key"
+
+// Hull area (as a fraction of the canvas) mapped onto the ASCII -> AI morph:
+// a small fingertip window is pure ASCII, spreading the hands develops it
+// into the raw AI feed. A relaxed two-hand hull sits around 10-25% of the
+// canvas, so full anime takes a deliberate wide spread.
+const MORPH_AREA_MIN = 0.1
+const MORPH_AREA_MAX = 0.45
+// Glyph size shrinks as the morph advances, so the characters dissolve into
+// the image instead of just fading.
+const MORPH_CELL_MAX = 12
+const MORPH_CELL_MIN = 7
 
 export type SynthHud = {
   chordLabel: string
@@ -73,6 +93,26 @@ export function useGestureSynth() {
   const [waveform, setWaveformState] = useState<Waveform>("triangle")
   const [hud, setHud] = useState<SynthHud>(INITIAL_HUD)
 
+  // AI-key fallback: true once the token endpoint reports the server has no
+  // key, which reveals the "AI KEY" row on the HUD.
+  const lucyRef = useRef<LucyEffect | null>(null)
+  const [aiKeyNeeded, setAiKeyNeeded] = useState(false)
+  // Hydration-safe despite the storage read: the key is only rendered
+  // inside the AI row, which never shows on the first paint.
+  const [aiKey, setAiKeyState] = useState(() =>
+    typeof window === "undefined"
+      ? ""
+      : (localStorage.getItem(AI_KEY_STORAGE) ?? "")
+  )
+
+  const setAiKey = useCallback((key: string) => {
+    const trimmed = key.trim()
+    setAiKeyState(trimmed)
+    if (trimmed) localStorage.setItem(AI_KEY_STORAGE, trimmed)
+    else localStorage.removeItem(AI_KEY_STORAGE)
+    lucyRef.current?.setUserKey(trimmed || null)
+  }, [])
+
   const start = useCallback(() => {
     // Audio contexts must be created from a user gesture
     synthRef.current!.ensureContext()
@@ -93,6 +133,7 @@ export function useGestureSynth() {
     setWaveformState(wave)
   }, [])
 
+
   useEffect(() => {
     const videoEl = videoRef.current
     const canvasEl = canvasRef.current
@@ -104,6 +145,9 @@ export function useGestureSynth() {
     const synth = synthRef.current!
     const stabilizer = new ChordStabilizer()
     const asciiEffect = new AsciiEffect()
+    const lucyEffect = new LucyEffect()
+    lucyEffect.setUserKey(localStorage.getItem(AI_KEY_STORAGE))
+    lucyRef.current = lucyEffect
 
     let disposed = false
     let rafId = 0
@@ -120,8 +164,13 @@ export function useGestureSynth() {
     }
 
     async function setupCamera() {
+      // Lucy 2.5 expects 1280x720 @ 30fps landscape input.
       stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: 640, height: 480 },
+        video: {
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          frameRate: { ideal: 30 },
+        },
         audio: false,
       })
       videoEl!.srcObject = stream
@@ -149,9 +198,18 @@ export function useGestureSynth() {
       let leftHand: Landmarks | null = null
       let rightHand: Landmarks | null = null
 
+      // Smoothed ASCII -> AI morph position (0..1), driven by hull area
+      let morph = 0
+
       function loop() {
         const now = performance.now()
         const settings = settingsRef.current
+
+        // 0. Keep the Lucy session alive (reconnecting after failures with
+        // backoff) so the AI world is already streaming when the fingertip
+        // hull appears. If the server has no key, sync keeps failing quietly
+        // and the app stays pure ASCII.
+        lucyEffect.sync(stream, ANIME_PROMPT)
 
         // 1. Pull a fresh MediaPipe result when the video advances
         if (videoEl!.currentTime !== lastVideoTime) {
@@ -170,7 +228,10 @@ export function useGestureSynth() {
 
           // TouchDesigner-style effect region: every extended fingertip is a
           // candidate corner, and their convex hull (the best polygon the
-          // active fingers can form) renders the feed as ASCII art.
+          // active fingers can form) becomes a window into the effect. With
+          // an AI style live, hull area morphs the window from ASCII (small)
+          // to the raw AI feed (hands spread wide): the glyphs sample the AI
+          // world, shrink, and dissolve into it.
           const lh: Landmarks | null = leftHand
           const rh: Landmarks | null = rightHand
           const tips = [
@@ -189,13 +250,38 @@ export function useGestureSynth() {
                 )
               )
             )
-            asciiEffect.draw(
-              ctx!,
-              videoEl!,
-              corners,
-              canvasEl!.width,
-              canvasEl!.height
-            )
+            const canvasW = canvasEl!.width
+            const canvasH = canvasEl!.height
+            const aiVideo = lucyEffect.liveVideo
+
+            const areaFrac = polygonArea(corners) / (canvasW * canvasH)
+            const t = aiVideo
+              ? Math.min(
+                  1,
+                  Math.max(
+                    0,
+                    (areaFrac - MORPH_AREA_MIN) /
+                      (MORPH_AREA_MAX - MORPH_AREA_MIN)
+                  )
+                )
+              : 0
+            // Smoothstep for soft ends, then ease toward the target so the
+            // transition glides instead of tracking area jitter.
+            const target = t * t * (3 - 2 * t)
+            morph += (target - morph) * 0.15
+            if (morph < 0.005) morph = 0
+
+            if (aiVideo && morph > 0.01) {
+              lucyEffect.draw(ctx!, corners, canvasW, canvasH, { alpha: morph })
+            }
+            if (morph < 0.99) {
+              asciiEffect.draw(ctx!, aiVideo ?? videoEl!, corners, canvasW, canvasH, {
+                alpha: 1 - morph,
+                cell: Math.round(
+                  MORPH_CELL_MAX - morph * (MORPH_CELL_MAX - MORPH_CELL_MIN)
+                ),
+              })
+            }
           }
         }
 
@@ -278,6 +364,7 @@ export function useGestureSynth() {
 
           return unchanged ? prev : next
         })
+        setAiKeyNeeded(lucyEffect.needsUserKey)
 
         // 6. Energy ribbon
         drawEnergy(ctx!, volume, qualityIndex, tilt, currentChord)
@@ -296,6 +383,8 @@ export function useGestureSynth() {
       window.removeEventListener("resize", resizeCanvas)
       stream?.getTracks().forEach((track) => track.stop())
       handLandmarker?.close()
+      lucyRef.current = null
+      lucyEffect.dispose()
       synth.dispose()
     }
   }, [])
@@ -310,5 +399,8 @@ export function useGestureSynth() {
     setKeyNote,
     waveform,
     setWaveform,
+    aiKeyNeeded,
+    aiKey,
+    setAiKey,
   }
 }

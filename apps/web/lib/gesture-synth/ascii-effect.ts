@@ -39,17 +39,33 @@ export function convexHull(points: Point[]): Point[] {
   return lower.concat(upper)
 }
 
+// Shoelace area of a polygon in drawing order.
+export function polygonArea(points: Point[]): number {
+  let area = 0
+  for (let i = 0; i < points.length; i++) {
+    const p = points[i]!
+    const q = points[(i + 1) % points.length]!
+    area += p.x * q.y - q.x * p.y
+  }
+  return Math.abs(area / 2)
+}
+
 // Dark -> bright character ramp
 const RAMP = " .:-=+*#%@"
 const CELL = 12 // px per character cell
+const CONTRAST = 1.8 // luminance gain around midpoint; 1 = camera as-is
 const TEXT_COLOR = "#7fa5ff" // matches --synth-text
+const HIGHLIGHT_COLOR = "#d6e4ff" // brightest cells pop toward white
+const HIGHLIGHT_THRESHOLD = 0.7
 const OUTLINE_COLOR = "#3a63d6" // matches --synth-border
 const BACKDROP_COLOR = "#04070d"
 
-// Renders the video feed as ASCII art inside a quad region of the canvas
-// (TouchDesigner-style). The video is downsampled to one pixel per character
-// cell using the same mirrored cover crop the main canvas shows, so each
-// cell samples exactly the pixels it covers.
+// Renders a video source as ASCII art inside a quad region of the canvas
+// (TouchDesigner-style). The source (camera or AI feed) is downsampled to one
+// pixel per character cell using the same mirrored cover crop the main canvas
+// shows, so each cell samples exactly the pixels it covers. `alpha` fades the
+// glyph layer (the outline stays solid) and `cell` sets glyph size, so a
+// morph can dissolve the characters into whatever is drawn beneath.
 export class AsciiEffect {
   private sample = document.createElement("canvas")
   private sctx = this.sample.getContext("2d", { willReadFrequently: true })!
@@ -59,12 +75,15 @@ export class AsciiEffect {
     video: HTMLVideoElement,
     corners: Point[],
     canvasW: number,
-    canvasH: number
+    canvasH: number,
+    opts: { alpha?: number; cell?: number } = {}
   ) {
     if (corners.length < 3 || !video.videoWidth || !video.videoHeight) return
+    const alpha = opts.alpha ?? 1
+    const cell = opts.cell ?? CELL
 
-    const cols = Math.ceil(canvasW / CELL)
-    const rows = Math.ceil(canvasH / CELL)
+    const cols = Math.ceil(canvasW / cell)
+    const rows = Math.ceil(canvasH / cell)
     if (this.sample.width !== cols || this.sample.height !== rows) {
       this.sample.width = cols
       this.sample.height = rows
@@ -101,31 +120,41 @@ export class AsciiEffect {
     ctx.save()
     quadPath()
     ctx.clip()
+    ctx.globalAlpha = alpha
 
     ctx.fillStyle = BACKDROP_COLOR
     ctx.fillRect(minX, minY, maxX - minX, maxY - minY)
 
     ctx.fillStyle = TEXT_COLOR
-    ctx.font = `bold ${CELL}px monospace`
+    ctx.font = `bold ${cell}px monospace`
     ctx.textBaseline = "top"
 
-    const colStart = Math.max(0, Math.floor(minX / CELL))
-    const colEnd = Math.min(cols, Math.ceil(maxX / CELL))
-    const rowStart = Math.max(0, Math.floor(minY / CELL))
-    const rowEnd = Math.min(rows, Math.ceil(maxY / CELL))
+    const colStart = Math.max(0, Math.floor(minX / cell))
+    const colEnd = Math.min(cols, Math.ceil(maxX / cell))
+    const rowStart = Math.max(0, Math.floor(minY / cell))
+    const rowEnd = Math.min(rows, Math.ceil(maxY / cell))
 
+    const highlights: [string, number, number][] = []
     for (let row = rowStart; row < rowEnd; row++) {
       for (let col = colStart; col < colEnd; col++) {
         const i = (row * cols + col) * 4
-        const luminance =
+        const raw =
           (0.2126 * pixels[i]! + 0.7152 * pixels[i + 1]! + 0.0722 * pixels[i + 2]!) /
           255
+        const luminance = Math.min(1, Math.max(0, (raw - 0.5) * CONTRAST + 0.5))
         const char =
           RAMP[Math.min(RAMP.length - 1, Math.floor(luminance * RAMP.length))]!
-        if (char !== " ") {
-          ctx.fillText(char, col * CELL, row * CELL)
+        if (char === " ") continue
+        if (luminance >= HIGHLIGHT_THRESHOLD) {
+          highlights.push([char, col * cell, row * cell])
+        } else {
+          ctx.fillText(char, col * cell, row * cell)
         }
       }
+    }
+    ctx.fillStyle = HIGHLIGHT_COLOR
+    for (const [char, x, y] of highlights) {
+      ctx.fillText(char, x, y)
     }
     ctx.restore()
 

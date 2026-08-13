@@ -2,7 +2,6 @@
 
 import { useRef } from "react"
 
-import { Button } from "@workspace/ui/components/button"
 import {
   Dialog,
   DialogContent,
@@ -28,25 +27,21 @@ function Section({
   )
 }
 
-export function HelpDialog() {
+type HelpDialogProps = {
+  // Element rendered as the dialog trigger (props are merged onto it);
+  // `label` becomes its children.
+  trigger: React.ReactElement
+  label: React.ReactNode
+}
+
+export function HelpDialog({ trigger, label }: HelpDialogProps) {
   // Focus the title on open so the scrollable guide starts at the top
   // instead of auto-focusing the link at the bottom.
   const titleRef = useRef<HTMLHeadingElement | null>(null)
 
   return (
     <Dialog>
-      <DialogTrigger
-        render={
-          <Button
-            variant="outline"
-            size="icon-lg"
-            aria-label="Help"
-            className="absolute bottom-4 left-4 z-6 border-2 border-(--synth-border) bg-(--synth-panel)/90 font-pixel text-base text-(--synth-text) shadow-[3px_3px_0_rgba(0,0,0,0.5)] hover:border-(--synth-text) hover:bg-(--synth-panel) hover:text-(--synth-text) dark:border-(--synth-border) dark:bg-(--synth-panel)/90 dark:hover:bg-(--synth-panel)"
-          />
-        }
-      >
-        ?
-      </DialogTrigger>
+      <DialogTrigger render={trigger}>{label}</DialogTrigger>
 
       <DialogContent
         initialFocus={titleRef}
@@ -121,15 +116,6 @@ export function HelpDialog() {
             Lower → Softer
           </p>
         </Section>
-
-        <a
-          href="https://www.instagram.com/p/DbH1BACxNCG/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="font-mono text-sm text-(--synth-text) hover:text-white"
-        >
-          📹 Watch Video Tutorial on Instagram!
-        </a>
       </DialogContent>
     </Dialog>
   )
