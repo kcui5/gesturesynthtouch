@@ -50,9 +50,9 @@ export function AiKeyDialog({
             AI Effect Key
           </DialogTitle>
           <DialogDescription className="font-mono text-sm leading-relaxed text-white/85">
-            This deployment has no AI key of its own. Paste a Decart API key
-            to unlock the anime morph — without one the synth stays pure
-            ASCII. The key is stored only in this browser.
+            To unlock anime morph, paste your Decart API key here.
+            <br />
+            The key is stored only in this browser.
           </DialogDescription>
         </DialogHeader>
 

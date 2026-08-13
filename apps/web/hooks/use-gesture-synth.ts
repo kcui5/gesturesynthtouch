@@ -113,9 +113,14 @@ export function useGestureSynth() {
     lucyRef.current?.setUserKey(trimmed || null)
   }, [])
 
+  // Read inside the animation loop: the Lucy session (billed per streamed
+  // minute) must not connect until the user actually starts the synth.
+  const startedRef = useRef(false)
+
   const start = useCallback(() => {
     // Audio contexts must be created from a user gesture
     synthRef.current!.ensureContext()
+    startedRef.current = true
     setStarted(true)
   }, [])
 
@@ -164,12 +169,13 @@ export function useGestureSynth() {
     }
 
     async function setupCamera() {
-      // Lucy 2.5 expects 1280x720 @ 30fps landscape input.
+      // 640x480 like the original prototype: MediaPipe hand tracking is the
+      // latency-critical consumer, and the smaller frames keep it smooth
+      // alongside Lucy's WebRTC encode. Lucy upscales its input itself.
       stream = await navigator.mediaDevices.getUserMedia({
         video: {
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-          frameRate: { ideal: 30 },
+          width: { ideal: 640 },
+          height: { ideal: 480 },
         },
         audio: false,
       })
@@ -207,9 +213,10 @@ export function useGestureSynth() {
 
         // 0. Keep the Lucy session alive (reconnecting after failures with
         // backoff) so the AI world is already streaming when the fingertip
-        // hull appears. If the server has no key, sync keeps failing quietly
-        // and the app stays pure ASCII.
-        lucyEffect.sync(stream, ANIME_PROMPT)
+        // hull appears. Gated on start so no billed streaming happens while
+        // the page just sits on the overlay. If the server has no key, sync
+        // keeps failing quietly and the app stays pure ASCII.
+        lucyEffect.sync(startedRef.current ? stream : null, ANIME_PROMPT)
 
         // 1. Pull a fresh MediaPipe result when the video advances
         if (videoEl!.currentTime !== lastVideoTime) {
