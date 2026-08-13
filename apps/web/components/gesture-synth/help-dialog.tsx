@@ -45,7 +45,7 @@ export function HelpDialog({ trigger, label }: HelpDialogProps) {
 
       <DialogContent
         initialFocus={titleRef}
-        className="max-h-[80vh] gap-4 overflow-y-auto border-2 border-(--synth-border) bg-(--synth-panel) text-white shadow-[6px_6px_0_rgba(0,0,0,0.6)] ring-0 sm:max-w-lg **:data-[slot=dialog-close]:text-(--synth-text)"
+        className="max-h-[80vh] gap-4 overflow-y-auto border-2 border-(--synth-border) bg-(--synth-panel) text-white shadow-[6px_6px_0_rgba(0,0,0,0.6)] ring-0 sm:max-w-xl **:data-[slot=dialog-close]:text-(--synth-text)"
       >
         <DialogHeader>
           <DialogTitle
@@ -56,7 +56,16 @@ export function HelpDialog({ trigger, label }: HelpDialogProps) {
             Gesture Synth Guide
           </DialogTitle>
           <p className="font-mono text-sm leading-snug text-white/85">
-            Built on the beautiful work of{" "}
+            Built by{" "}
+            <a
+              href="https://kylecui.dev"
+              target="_blank"
+              rel="noopener"
+              className="text-(--synth-text) underline underline-offset-2 hover:text-white"
+            >
+              Kyle
+            </a>{" "}
+            on the beautiful work of{" "}
             <a
               href="https://indecisiveeric.com"
               target="_blank"

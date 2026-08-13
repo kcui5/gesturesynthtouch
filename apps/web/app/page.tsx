@@ -1,10 +1,15 @@
 import { GestureSynth } from "@/components/gesture-synth/gesture-synth"
 
-export const metadata = {
-  title: "Gesture Synth Touch",
-  description: "A gesture synth for the web with TouchDesigner-esque effects. Enable your webcam and hold your hands up to start making cool music!",
-}
-
 export default function Page() {
-  return <GestureSynth />
+  return (
+    <>
+      {/* The app itself is a canvas; give crawlers and screen readers a
+          real heading describing it. */}
+      <h1 className="sr-only">
+        Gesture Synth Touch — a webcam gesture-controlled synthesizer in the
+        browser
+      </h1>
+      <GestureSynth />
+    </>
+  )
 }
