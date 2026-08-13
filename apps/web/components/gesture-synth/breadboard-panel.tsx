@@ -24,7 +24,7 @@ const lcdText = "text-[#ace6f8]"
 const lcdDim = "text-[#5e93ad]"
 
 const screenTriggerClass =
-  "h-auto w-auto justify-end gap-1 border-0 bg-transparent p-0 font-lcd text-[17px] text-[#ace6f8] shadow-none ring-0 hover:bg-transparent hover:text-white dark:bg-transparent dark:hover:bg-transparent [&_svg]:size-3 [&_svg]:text-[#ace6f8]/60"
+  "h-auto w-auto justify-end gap-1 border-0 bg-transparent p-0 font-lcd text-[20px] leading-none text-[#ace6f8] shadow-none ring-0 data-[size=default]:h-auto hover:bg-transparent hover:text-white dark:bg-transparent dark:hover:bg-transparent [&_svg]:size-3 [&_svg]:text-[#ace6f8]/60"
 
 const screenContentClass =
   "border-2 border-[#7cc7e8]/70 bg-[#04141d] font-lcd text-[15px] text-[#ace6f8] ring-0"
@@ -32,8 +32,10 @@ const screenContentClass =
 const screenItemClass =
   "text-[15px] focus:bg-[#ace6f8]/15 focus:text-[#ace6f8] not-data-[variant=destructive]:focus:**:text-[#ace6f8]"
 
+// Negative margins pull the neighboring rows in past the container gap, so
+// dividers sit tighter to the text than rows do to each other.
 function ScreenDivider() {
-  return <div className="h-[2px] w-full bg-[#7cc7e8]" />
+  return <div className="-my-[3px] h-[2px] w-full bg-[#7cc7e8]" />
 }
 
 // Jumper wires running from the display module's pin header off the screen
@@ -181,9 +183,11 @@ export function BreadboardPanel({
           ))}
         </div>
 
-        {/* The screen carries every HUD element */}
-        <div className="mx-[24px] flex flex-col gap-[7px] bg-[#050a0d] px-4 py-3.5 font-lcd text-[17px]">
-          <div className={lcdText}>&gt; Synth Cfg</div>
+        {/* The screen carries every HUD element. The half-pixel text-shadow
+            fattens VT323's strokes toward LCD-pixel chunkiness without going
+            full double-wide. */}
+        <div className="mx-[24px] flex flex-col gap-[9px] bg-[#050a0d] px-4 py-3.5 font-lcd text-[20px] leading-none [text-shadow:0.5px_0_0_currentColor]">
+          <div className={lcdText}>&gt; SYNTH CFG</div>
           <ScreenDivider />
 
           <div className={`flex items-center justify-between ${lcdText}`}>
@@ -258,7 +262,7 @@ export function BreadboardPanel({
                 trigger={
                   <button
                     type="button"
-                    className={`cursor-pointer font-lcd text-[17px] ${lcdDim} hover:text-[#ace6f8]`}
+                    className={`cursor-pointer font-lcd text-[20px] leading-none ${lcdDim} hover:text-[#ace6f8]`}
                   />
                 }
                 label={aiKey ? "Key Set" : "Set Key"}
@@ -272,7 +276,7 @@ export function BreadboardPanel({
             trigger={
               <button
                 type="button"
-                className={`w-fit cursor-pointer font-lcd text-[17px] ${lcdDim} hover:text-[#ace6f8]`}
+                className={`w-fit cursor-pointer font-lcd text-[20px] leading-none ${lcdDim} hover:text-[#ace6f8]`}
               />
             }
             label="? Help"
